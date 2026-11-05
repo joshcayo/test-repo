@@ -38,6 +38,9 @@ final class PlayerModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
     private let playlistsKey = "mish.playlists"
     @Published private(set) var spectrum: [Float] =
         Array(repeating: 0, count: MishSpectrumAnalyzer.bandCount)
+    private let beatDetector = MishBeatDetector()
+    @Published private(set) var estimatedBPM: Double = 0
+    @Published private(set) var beatIntensity: Float = 0
     @Published var repeatMode: RepeatMode = .off
     @Published var shuffleOn = false {
         didSet { rebuildOrder() }
@@ -586,6 +589,9 @@ func addToPlaylist(id: UUID, track: Track) {
     
             player = p
             currentIndex = index
+            beatDetector.reset()
+            estimatedBPM = 0
+            beatIntensity = 0
     
             if let pos = order.firstIndex(of: index) {
                 orderPos = pos
@@ -713,6 +719,12 @@ func addToPlaylist(id: UUID, track: Track) {
             self.audioSampler.analyze(url: url, at: time) { [weak self] newSpectrum in
                 guard let self = self, self.isPlaying, self.currentTrack?.url == url else { return }
                 self.spectrum = newSpectrum
+                self.beatDetector.process(
+                    spectrum: newSpectrum,
+                    at: time
+                )
+                self.estimatedBPM = self.beatDetector.bpm
+                self.beatIntensity = self.beatDetector.beatIntensity
             }
         }
     }
