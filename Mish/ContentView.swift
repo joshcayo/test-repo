@@ -317,7 +317,12 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            if isBeautySleepTrack {
+            if player.isSmilePlusMode {
+                SmilePlusAlbumWall(
+                    artwork: player.currentTrack?.artwork
+                )
+        
+            } else if isBeautySleepTrack {
                 BeautySleepVideoBackground()
                     .ignoresSafeArea()
         
