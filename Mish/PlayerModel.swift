@@ -59,6 +59,17 @@ final class PlayerModel: NSObject, ObservableObject, AVAudioPlayerDelegate {
     ).caseInsensitiveCompare("Jane Remover") == .orderedSame
 }
 
+    var isSmilePlusMode: Bool {
+    guard hasActivePlayback,
+          let album = currentTrack?.album else {
+        return false
+    }
+
+    return album.trimmingCharacters(
+        in: .whitespacesAndNewlines
+    ).caseInsensitiveCompare("SMILE! :D plus+") == .orderedSame
+}
+
     // MARK: - Private state
     private var player: AVAudioPlayer?
     private let audioSampler = MishAudioSampler()
