@@ -319,7 +319,9 @@ struct ContentView: View {
         ZStack {
             if player.isSmilePlusMode {
                 SmilePlusAlbumWall(
-                    artwork: player.currentTrack?.artwork
+                    artwork: player.currentTrack?.artwork,
+                    bpm: player.estimatedBPM,
+                    beatIntensity: player.beatIntensity
                 )
         
             } else if isBeautySleepTrack {
