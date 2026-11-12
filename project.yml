@@ -29,6 +29,7 @@ targets:
         CFBundleDisplayName: mish
         UILaunchScreen: {}
         UIUserInterfaceStyle: Dark
+        NSMotionUsageDescription: "Mish uses subtle device-motion parallax when you enable it for a theme."
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         # keep playing with the screen locked / app in the background (no special entitlement needed)
