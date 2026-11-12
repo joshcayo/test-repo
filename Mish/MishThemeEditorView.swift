@@ -1,3 +1,6 @@
+import SwiftUI
+import PhotosUI
+
 private struct MishThemeDetailEditor: View {
     @EnvironmentObject private var themeStore: MishThemeStore
     @Environment(\.dismiss) private var dismiss
