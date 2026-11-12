@@ -251,7 +251,9 @@ struct ContentView: View {
     private var albumBlurRadius = 55.0
     @StateObject private var lyricsModel = LyricsModel()
     @EnvironmentObject private var settings: MishSettings
+    @EnvironmentObject private var themeStore: MishThemeStore
     @State private var showAppearanceSettings = false
+    @State private var showThemeEditor = false
     
 
 @State private var showBackgroundSettings = false
@@ -332,11 +334,11 @@ struct ContentView: View {
                     .ignoresSafeArea()
         
             } else if isDoItTrack {
-                AlbumArtBackground(
+                MishThemedBackground(
                     artwork: player.currentTrack?.artwork,
-                    blurRadius: albumBlurRadius,
-                    blurEnabled: albumBlurEnabled,
-                    theme: settings.baseTheme
+                    fallbackTheme: settings.baseTheme,
+                    albumBlurEnabled: albumBlurEnabled,
+                    albumBlurRadius: albumBlurRadius
                 )
                 .id(player.currentTrack?.url)
             } else if specialMode {
@@ -380,11 +382,11 @@ struct ContentView: View {
                     .ignoresSafeArea()
         
             } else {
-                AlbumArtBackground(
+                MishThemedBackground(
                     artwork: player.currentTrack?.artwork,
-                    blurRadius: albumBlurRadius,
-                    blurEnabled: albumBlurEnabled,
-                    theme: settings.baseTheme
+                    fallbackTheme: settings.baseTheme,
+                    albumBlurEnabled: albumBlurEnabled,
+                    albumBlurRadius: albumBlurRadius
                 )
                 .id(player.currentTrack?.url)
             }
@@ -459,8 +461,9 @@ struct ContentView: View {
                 )
                 bottomNav
             }
-            .foregroundStyle(specialMode ? Color.black : Color.white)
+            .foregroundStyle(specialMode ? Color.black : themeStore.activeTheme.mainColor)
         }
+        .tint(themeStore.activeTheme.accentColor)
         .preferredColorScheme(specialMode ? .light : .dark)
         .animation(.easeInOut(duration: 0.22), value: specialMode)
 
@@ -495,6 +498,10 @@ struct ContentView: View {
         .sheet(isPresented: $showAppearanceSettings) {
             AppearanceSettingsView()
                 .environmentObject(settings)
+        }
+        .sheet(isPresented: $showThemeEditor) {
+            MishThemeEditorView()
+                .environmentObject(themeStore)
         }
         .task(id: player.currentTrack?.url) {
             guard let track = player.currentTrack else {
@@ -543,28 +550,42 @@ struct ContentView: View {
                     .frame(width: 44, height: 44)
             }
             .tint(specialMode ? .black : .white)
+            .frame(width: 88, alignment: .leading)
 
             Spacer()
 
             Text("mish")
                 .font(.custom("delagothicone-regular", size: 20))
-                .foregroundStyle(specialMode ? .black : .white)
+                .foregroundStyle(specialMode ? .black : themeStore.activeTheme.mainColor)
 
             Spacer()
 
-            Button {
-                showBackgroundSettings = true
-            } label: {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 18, weight: .medium))
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Background Settings")
-                    }
-                    .foregroundColor(specialMode ? .black : .white)
-                    .padding(.horizontal, 12)
+            HStack(spacing: 0) {
+                Button {
+                    showThemeEditor = true
+                } label: {
+                    Image(systemName: "paintbrush.pointed")
+                        .font(.system(size: 18, weight: .medium))
+                        .frame(width: 44, height: 44)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Theme Editor")
+
+                Button {
+                    showBackgroundSettings = true
+                } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 18, weight: .medium))
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Background Settings")
+            }
+            .frame(width: 88, alignment: .trailing)
+            .foregroundColor(specialMode ? .black : themeStore.activeTheme.mainColor)
+        }
+        .padding(.horizontal, 12)
+    }
 
     // MARK: Bottom nav
     
@@ -606,18 +627,18 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, minHeight: 46)
                 .foregroundStyle(
                     tab == target
-                        ? (specialMode ? Color.black : Color.white)
+                        ? (specialMode ? Color.black : themeStore.activeTheme.mainColor)
                         : (specialMode
                             ? Color.black.opacity(0.55)
-                            : Color.white.opacity(0.58))
+                            : themeStore.activeTheme.mainColor.opacity(0.58))
                 )
                 .background {
                     if tab == target {
                         RoundedRectangle(cornerRadius: 17, style: .continuous)
-                            .fill(.white.opacity(specialMode ? 0.14 : 0.16))
+                            .fill(themeStore.activeTheme.accentColor.opacity(specialMode ? 0.14 : 0.20))
                             .overlay {
                                 RoundedRectangle(cornerRadius: 17, style: .continuous)
-                                    .strokeBorder(.white.opacity(0.24), lineWidth: 1)
+                                    .strokeBorder(themeStore.activeTheme.accentColor.opacity(0.42), lineWidth: 1)
                             }
                     }
                 }
@@ -698,6 +719,7 @@ struct NowPlayingView: View {
     @State private var liked = false
     @State private var scrubbing = false
     @EnvironmentObject private var settings: MishSettings
+    @EnvironmentObject private var themeStore: MishThemeStore
     @State private var scrubValue: Double = 0
     @State private var frozenSpectrum: [Float]? = nil
     @State private var vinylRotation: Double = 0
@@ -720,10 +742,10 @@ struct NowPlayingView: View {
             in: .whitespacesAndNewlines
         ).localizedCaseInsensitiveCompare("underscores") == .orderedSame
     }
-    private var mainText: Color { specialMode ? .black : .white }
-    private var secondaryText: Color { specialMode ? Color.black.opacity(0.62) : Color(hex: 0xa7a8b3) }
-    private var progressTrack: Color { specialMode ? Color.black.opacity(0.22) : Color(hex: 0x454650) }
-    private var progressFill: Color { specialMode ? .black : Color(hex: 0xf5f5f7) }
+    private var mainText: Color { specialMode ? .black : themeStore.activeTheme.mainColor }
+    private var secondaryText: Color { specialMode ? Color.black.opacity(0.62) : themeStore.activeTheme.mainColor.opacity(0.68) }
+    private var progressTrack: Color { specialMode ? Color.black.opacity(0.22) : themeStore.activeTheme.mainColor.opacity(0.20) }
+    private var progressFill: Color { specialMode ? .black : themeStore.activeTheme.accentColor }
     private var displayTime: Double { scrubbing ? scrubValue : player.currentTime }
     private var progress: Double {
         player.duration > 0 ? min(max(displayTime / player.duration, 0), 1) : 0
