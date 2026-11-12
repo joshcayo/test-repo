@@ -1,115 +1,3 @@
-import SwiftUI
-import PhotosUI
-
-struct MishThemeEditorView: View {
-    @EnvironmentObject private var themeStore: MishThemeStore
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var editingTheme: MishTheme?
-    @State private var showDeleteConfirmation = false
-    @State private var themePendingDeletion: UUID?
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    ForEach(themeStore.themes) { theme in
-                        Button {
-                            themeStore.select(theme.id)
-                            editingTheme = theme
-                        } label: {
-                            HStack(spacing: 12) {
-                                themeSwatches(theme)
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(theme.name.isEmpty ? "Untitled Theme" : theme.name)
-                                        .font(.body.weight(.semibold))
-                                        .foregroundStyle(.primary)
-                                    Text(theme.motion.title + (theme.backgroundImageFilename == nil ? " · Color background" : " · Custom image"))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                if themeStore.activeThemeID == theme.id {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(theme.accentColor)
-                                }
-                                Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .swipeActions {
-                            if themeStore.themes.count > 1 {
-                                Button(role: .destructive) {
-                                    themePendingDeletion = theme.id
-                                    showDeleteConfirmation = true
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Your themes")
-                } footer: {
-                    Text("Choose a theme to make it active, then customize its colors, background, blur, and motion.")
-                }
-
-                Section {
-                    Button {
-                        let id = themeStore.createTheme()
-                        editingTheme = themeStore.themes.first(where: { $0.id == id })
-                    } label: {
-                        Label("Create a theme", systemImage: "plus.circle.fill")
-                            .foregroundStyle(themeStore.activeTheme.accentColor)
-                    }
-                }
-            }
-            .navigationTitle("Theme Studio")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
-            .sheet(item: $editingTheme) { theme in
-                MishThemeDetailEditor(theme: theme)
-                    .environmentObject(themeStore)
-            }
-            .confirmationDialog(
-                "Delete this theme?",
-                isPresented: $showDeleteConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Delete Theme", role: .destructive) {
-                    if let id = themePendingDeletion { themeStore.delete(id) }
-                    themePendingDeletion = nil
-                }
-                Button("Cancel", role: .cancel) { themePendingDeletion = nil }
-            } message: {
-                Text("This removes the theme and its saved background image.")
-            }
-        }
-        .preferredColorScheme(.dark)
-    }
-
-    private func themeSwatches(_ theme: MishTheme) -> some View {
-        HStack(spacing: 0) {
-            theme.backgroundColor
-            theme.accentColor
-            theme.mainColor
-        }
-        .frame(width: 48, height: 48)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(.white.opacity(0.18), lineWidth: 1)
-        }
-    }
-}
-
 private struct MishThemeDetailEditor: View {
     @EnvironmentObject private var themeStore: MishThemeStore
     @Environment(\.dismiss) private var dismiss
@@ -124,20 +12,24 @@ private struct MishThemeDetailEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Theme name") {
+                Section {
                     TextField("Give your theme a name", text: $theme.name)
-                        .onChange(of: theme.name) { _, _ in save() }
+                        .onChange(of: theme.name) { _ in save() }
+                } header: {
+                    Text("Theme name")
                 }
 
-                Section("Colors") {
+                Section {
                     colorRow("Accent color", hex: $theme.accentHex)
                     colorRow("Main color", hex: $theme.mainHex)
                     colorRow("Background color", hex: $theme.backgroundHex)
+                } header: {
+                    Text("Colors")
                 } footer: {
                     Text("Accent is used for highlights and selected states. Main is the primary text and control color.")
                 }
 
-                Section("Background picture") {
+                Section {
                     PhotosPicker(selection: $selectedPhoto, matching: .images) {
                         Label(
                             theme.backgroundImageFilename == nil ? "Choose a picture" : "Replace picture",
@@ -158,13 +50,15 @@ private struct MishThemeDetailEditor: View {
                             Label("Remove background picture", systemImage: "trash")
                         }
                     }
+                } header: {
+                    Text("Background picture")
                 } footer: {
                     Text("Your selected image is copied into Mish's private app storage, so it remains available offline.")
                 }
 
-                Section("Blur") {
+                Section {
                     Toggle("Enable theme blur", isOn: $theme.blurEnabled)
-                        .onChange(of: theme.blurEnabled) { _, _ in save() }
+                        .onChange(of: theme.blurEnabled) { _ in save() }
 
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -176,16 +70,18 @@ private struct MishThemeDetailEditor: View {
                         }
                         Slider(value: $theme.blurRadius, in: 0...100, step: 1)
                             .disabled(!theme.blurEnabled)
-                            .onChange(of: theme.blurRadius) { _, _ in save() }
+                            .onChange(of: theme.blurRadius) { _ in save() }
                     }
 
                     Toggle("Override album-art blur", isOn: $theme.overridesAlbumArtBlur)
-                        .onChange(of: theme.overridesAlbumArtBlur) { _, _ in save() }
+                        .onChange(of: theme.overridesAlbumArtBlur) { _ in save() }
+                } header: {
+                    Text("Blur")
                 } footer: {
                     Text("When override is enabled, this theme's blur amount replaces the normal album-art background blur setting.")
                 }
 
-                Section("Background tint") {
+                Section {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text("Tint strength")
@@ -195,21 +91,25 @@ private struct MishThemeDetailEditor: View {
                                 .foregroundStyle(.secondary)
                         }
                         Slider(value: $theme.overlayOpacity, in: 0...0.9, step: 0.01)
-                            .onChange(of: theme.overlayOpacity) { _, _ in save() }
+                            .onChange(of: theme.overlayOpacity) { _ in save() }
                     }
+                } header: {
+                    Text("Background tint")
                 }
 
-                Section("Animation") {
+                Section {
                     Picker("Background motion", selection: $theme.motion) {
                         ForEach(MishTheme.BackgroundMotion.allCases) { motion in
                             Text(motion.title).tag(motion)
                         }
                     }
-                    .onChange(of: theme.motion) { _, _ in save() }
+                    .onChange(of: theme.motion) { _ in save() }
 
                     Text(theme.motion.subtitle)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                } header: {
+                    Text("Animation")
                 }
 
                 Section {
@@ -229,7 +129,7 @@ private struct MishThemeDetailEditor: View {
                     }
                 }
             }
-            .onChange(of: selectedPhoto) { _, item in
+            .onChange(of: selectedPhoto) { item in
                 Task { await importPhoto(item) }
             }
             .onDisappear { save() }
