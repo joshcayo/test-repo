@@ -1,6 +1,115 @@
 import SwiftUI
 import PhotosUI
 
+struct MishThemeEditorView: View {
+    @EnvironmentObject private var themeStore: MishThemeStore
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var editingTheme: MishTheme?
+    @State private var showDeleteConfirmation = false
+    @State private var themePendingDeletion: UUID?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(themeStore.themes) { theme in
+                        Button {
+                            themeStore.select(theme.id)
+                            editingTheme = theme
+                        } label: {
+                            HStack(spacing: 12) {
+                                themeSwatches(theme)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(theme.name.isEmpty ? "Untitled Theme" : theme.name)
+                                        .font(.body.weight(.semibold))
+                                        .foregroundStyle(.primary)
+                                    Text(theme.motion.title + (theme.backgroundImageFilename == nil ? " · Color background" : " · Custom image"))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if themeStore.activeThemeID == theme.id {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(theme.accentColor)
+                                }
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions {
+                            if themeStore.themes.count > 1 {
+                                Button(role: .destructive) {
+                                    themePendingDeletion = theme.id
+                                    showDeleteConfirmation = true
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Your themes")
+                } footer: {
+                    Text("Choose a theme to make it active, then customize its colors, background, blur, and motion.")
+                }
+
+                Section {
+                    Button {
+                        let id = themeStore.createTheme()
+                        editingTheme = themeStore.themes.first(where: { $0.id == id })
+                    } label: {
+                        Label("Create a theme", systemImage: "plus.circle.fill")
+                            .foregroundStyle(themeStore.activeTheme.accentColor)
+                    }
+                }
+            }
+            .navigationTitle("Theme Studio")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .sheet(item: $editingTheme) { theme in
+                MishThemeDetailEditor(theme: theme)
+                    .environmentObject(themeStore)
+            }
+            .confirmationDialog(
+                "Delete this theme?",
+                isPresented: $showDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete Theme", role: .destructive) {
+                    if let id = themePendingDeletion { themeStore.delete(id) }
+                    themePendingDeletion = nil
+                }
+                Button("Cancel", role: .cancel) { themePendingDeletion = nil }
+            } message: {
+                Text("This removes the theme and its saved background image.")
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private func themeSwatches(_ theme: MishTheme) -> some View {
+        HStack(spacing: 0) {
+            theme.backgroundColor
+            theme.accentColor
+            theme.mainColor
+        }
+        .frame(width: 48, height: 48)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(.white.opacity(0.18), lineWidth: 1)
+        }
+    }
+}
+
 private struct MishThemeDetailEditor: View {
     @EnvironmentObject private var themeStore: MishThemeStore
     @Environment(\.dismiss) private var dismiss
