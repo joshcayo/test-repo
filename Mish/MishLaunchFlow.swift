@@ -4,6 +4,7 @@ import SwiftUI
 struct MishLaunchFlow: View {
     @EnvironmentObject private var player: PlayerModel
     @StateObject private var settings = MishSettings()
+    @StateObject private var themeStore = MishThemeStore()
 
     private enum Stage {
         case intro
@@ -41,6 +42,7 @@ struct MishLaunchFlow: View {
                 ContentView()
                     .environmentObject(player)
                     .environmentObject(settings)
+                    .environmentObject(themeStore)
                     .transition(.opacity)
             }
         }
