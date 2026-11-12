@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-// MARK: - User themes
+// MARK: - User themes definition
 
 struct MishTheme: Identifiable, Codable, Equatable {
     enum BackgroundMotion: String, CaseIterable, Identifiable, Codable {
